@@ -1,17 +1,11 @@
-"""Cache a router's scopes for later cached-router runs.
+"""Cache a router's scopes so later runs need no LLM call.
 
-Run ANY router (an LLM via OpenRouter / any OpenAI-compatible endpoint) over a suite's task prompts
-ONCE, and persist the resulting per-task TaskScopes to rope/scopes/<name>/<suite>.json. After that,
-`rope.run_eval --router <name>` reads them deterministically with no per-run routing cost -- the same
-way opus / gemini-3-flash / gpt-oss-20b are used. This is the "bring your own router" path; the
-alternative is `--router live` (recompute every run, nothing persisted).
+Runs any router over a suite's task prompts once and persists the per-task TaskScopes to
+rope/scopes/<name>/<suite>.json, after which `rope.run_eval --router <name>` reads them
+deterministically. Reads only the trusted request per task.
 
-  # cache a new router's scopes for one suite, then benchmark with it:
   python -m rope.cache_router --router my-gpt4o --router-model openai/gpt-4o-2024-08-06 --suite github
   python -m rope.run_eval     --router my-gpt4o --suite github --attack important_instructions
-
-Reads only the trusted request per task (route_and_scope), so the cached scopes are injection-safe by
-construction. Costs one LLM call per task prompt.
 """
 
 from __future__ import annotations

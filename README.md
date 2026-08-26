@@ -19,7 +19,7 @@ Indirect prompt injection (IPI) plants instructions in the content a tool-using 
 | `src/common/` | LLM completion cache used by the router (trusted-input calls only). |
 | `autodojo/` | The main benchmark harness and adaptive attack: it directly supports all six evaluated suites: `banking`, `slack`, `travel` (three of AgentDojo's four) and `github`, `shopping`, `dailylife` (from AgentDyn). |
 | `agentlab/` | The long-horizon benchmark: AgentLAB's Task-Injection attack and its published attack traces, plus the replay driver. See `agentlab/README.md`. |
-| `runs/` | ROPE run logs (JSON) for all four agent models, and the scripts that recompute every reported ROPE number from them. |
+| `runs/` | ROPE run logs (JSON) for all four agent models, plus `runs/ablation/` (the two fixed-policy arms) and `runs/router/` (the cheaper routers, clamped and unclamped), and the scripts that recompute the reported ROPE numbers from them. |
 
 ## Setup
 
@@ -34,19 +34,29 @@ export PYTHONPATH=$PWD/autodojo/src:$PWD/src
 
 ```bash
 cd runs
-python aggregate.py         # CU / UA / ASR per suite + overalls
-python adaptive_rope.py     # static vs adaptive ASR (AutoDojo attack)
+python aggregate.py         # CU / UA / ASR per suite + overalls (both benchmarks)
+python adaptive_rope.py     # static vs adaptive, CU/UA/ASR (AutoDojo attack, both benchmarks)
 python longhorizon_rope.py  # long-horizon (AgentLAB Task-Injection)
+python ablation.py          # policy ablation: always-fully-specified / always-action-open
+python router.py            # cheaper routers, with and without the enforcement clamp
+python failures.py          # failure census: every residual attack success + clean-task failures
+python buckets.py           # per-category (under-specification bucket) tables
+python router_deviation.py  # per-router loosen/tighten counts vs the audited floor
 ```
 
-`runs/<model>/<suite>/user_task_*/` holds one JSON per evaluated cell: `none/` (clean),
+Each script recomputes its table from the logs and prints it; none carries expected values.
+`buckets.py` and `router_deviation.py` need `PYTHONPATH` set as above (they read the suite
+definitions and the cached scopes); the rest read only the shipped JSON logs.
+
+`runs/<model>/<suite>/user_task_*/`, `runs/ablation/<policy>/<suite>/user_task_*/` and
+`runs/router/<router>[-clamp]/<suite>/user_task_*/` each hold one JSON per evaluated cell: `none/` (clean),
 `important_instructions/` (static attack), `autodojo/` (adaptive attack), and
 `agentlab_longhorizon/` (long-horizon staged attack).
 
 **Scoring corrections.** Three benchmark oracles are unsound for execution-blocking defenses.
 `runs/corrections.py` dispatches the three effect-based rescorings — slack IT5,
 dailylife IT7, github IT1 — and the aggregators apply them; each module's docstring documents the
-artifact and the fix. CU/UA are never touched.
+artifact and the fix. CU and UA are never touched.
 
 ## Run the defense
 

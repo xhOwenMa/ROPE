@@ -41,20 +41,12 @@ def _always_false(value):  # the EXPLICIT default (no request authorization) -- 
     return False
 
 
-# ── the under-specification axis as a policy KNOB over provenance strictness ───────────────
-# The defense's per-task provenance markers (authored bucket-appropriately) ARE the conditioning:
-# fully-specified tasks pin values to the request, action-open tasks admit the named source, etc.
-# A POLICY MODE lets us collapse that conditioning for the ablation that proves it matters:
-#   "routed"                  -- use the per-task (bucket-appropriate) marker as authored. THE defense.
-#   "always-fully-specified"  -- treat EVERY task as fully-specified: every origin marker becomes
-#                                request-only (the value must be written in the user's request).
-#   "always-action-open"      -- treat EVERY task as action-open: every origin marker becomes the
-#                                loosest injection-safe set (named source / request).
-# Only the origin markers move; the structural guards (DEST write-dir, EXPLICIT explicit-only
-# action, MAGNITUDE, FREE) are bucket-independent and never change -- in particular an EXPLICIT action
-# is NOT loosened by action-open: even the loosest task may not invoke an irreversible op via a delegated
-# source; only the request itself may authorize it. This isolates the under-specification knob:
-# routed vs the two pinned extremes, on our OWN substrate (the control a CaMeL baseline can't provide).
+# Policy mode collapses the per-task conditioning, for the ablation:
+#   "routed"                 -- the per-task marker as authored. The defense.
+#   "always-fully-specified" -- every origin marker becomes request-only.
+#   "always-action-open"     -- every origin marker becomes the loosest injection-safe set.
+# Only origin markers move. The structural guards (DEST, EXPLICIT, FREE) are bucket-independent, so an
+# irreversible action still needs the request's own authorization even under action-open.
 POLICY_MODES = ("routed", "always-fully-specified", "always-action-open")
 _ORIGIN_FAMILY = frozenset({"sourced", "prompt", "oneof", "record", "cred"})  # origin markers
 

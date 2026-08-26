@@ -1,12 +1,8 @@
-"""Load cached router scopes + the audited floor for the routed defense.
+"""Load cached router scopes and the audited floor.
 
-A "router" turns the trusted request into a per-task TaskScope. We support:
-  - CACHED routers (opus, gemini-3-flash, gpt-oss-20b): their per-task scopes are stored as marker
-    JSON under scopes/<router>/<suite>.json; we read them at runtime (no LLM call).
-  - the LIVE router (run an LLM at runtime): handled in pipeline.py via router.route_and_scope.
-
-The audited FLOOR (the global state-changing-tool table per suite, authored once) lives in
-scopes/_floor/<suite>.json and is shared by every router. Marker (de)serialization is in markers.py.
+Cached routers store their per-task scopes as marker JSON under scopes/<router>/<suite>.json; the live
+router is handled in pipeline.py. The audited floor, shared by every router, is
+scopes/_floor/<suite>.json. Marker (de)serialization lives in markers.py.
 """
 
 from __future__ import annotations

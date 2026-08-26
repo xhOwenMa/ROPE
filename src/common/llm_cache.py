@@ -1,24 +1,13 @@
-"""Disk-backed cache for deterministic LLM completions.
+"""Disk-backed cache for the router's LLM completions.
 
-Why this exists: the defense's router calls (`Router.classify`, `route_and_scope`) read ONLY the
-trusted user task (never injected or runtime content), so their inputs are identical across a
-task's clean + every injection run and across reruns. That makes the completions safe to memoize.
-Caching:
-  (a) freezes one result per (model, prompt, input), removing temp-0 nondeterminism
-      so a task is routed identically everywhere (cleaner, reproducible numbers);
-  (b) cuts LLM round-trips ~10x on a suite (each user task is otherwise re-asked once per injection);
-  (c) leaves an inspectable on-disk record of every routing decision.
+The router reads only the trusted user task, so its inputs repeat across a task's clean and injected
+runs and the completions are safe to memoize. Caching also freezes one result per input, removing
+temp-0 nondeterminism. The agent LLM is deliberately not cached: its calls depend on injected runtime
+content.
 
-The cache key is sha256(model || system || user), so editing a prompt or switching models
-invalidates automatically — no manual versioning. The AGENT llm is deliberately NOT routed through
-here: its calls depend on injected runtime content and must never be cached. Caching is only sound
-because, by the defense's design, just the trusted-task calls flow through a completer.
-
-Storage: one JSON object {key: entry}, rewritten atomically (temp file + os.replace) on each new
-miss. Built for sequential / single-process use (the benchmark runs one suite at a time,
-max_workers=1). Under accidental concurrency the file stays valid (last writer wins); a few fresh
-entries could be lost, never corrupted. A corrupt cache file fails loudly on load (fail-fast) rather
-than silently resetting — delete it to rebuild.
+The key is sha256(model || system || user), so editing a prompt or switching models invalidates
+automatically. Storage is one JSON object rewritten atomically on each miss; a corrupt file fails
+loudly rather than silently resetting.
 """
 
 from __future__ import annotations

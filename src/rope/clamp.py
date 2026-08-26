@@ -1,12 +1,8 @@
-"""The enforcement CLAMP (live-router safety).
+"""The enforcement clamp.
 
-A router reads only the trusted request, so it can never be steered by an injection -- but a *weak*
-router can still make an honest MISTAKE that loosens a sensitive parameter below its floor default
-(e.g. emit FREE for a calendar title whose default is PROMPT). The clamp removes that failure mode:
-honor a per-task override ONLY when it is at least as STRICT as the floor default; drop any override
-that would LOOSEN a parameter below the floor, reverting that parameter to the audited default. So a
-router error can only ever cost utility (over-strict), never open a soundness hole. 
-The floor markers come from rope/scopes (self-contained).
+A router reads only the trusted request, so an injection cannot steer it, but a weak router can still
+mistakenly loosen a parameter below its floor default. The clamp honors an override only when it is at
+least as strict as the floor and drops the rest, so a router error costs utility, never soundness.
 """
 
 from __future__ import annotations

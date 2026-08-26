@@ -26,18 +26,15 @@ _STOPWORDS = frozenset({
 # Fields on an item-structured tool result that name an origin the attacker CANNOT forge.
 _ORIGIN_FIELDS = ("sender", "from")
 
-# The user's own AUTHORITATIVE RECORDS — read-tool outputs the attacker cannot write, and that
-# are clean at guard-check time. 
+# The user's own authoritative records: read-tool outputs the attacker cannot write, clean at
+# guard-check time.
 AUTHORITATIVE_RECORD_TOOLS = frozenset({"view_order_history", "git_get_linked_ssh_keys", "verify_github_account"})
 RECORD_SOURCE_KEY = "@authoritative_record"
 
-# ---------------------------------------------------------------------------------------------
-# RECORD CLOSURE (paper: Lemma "Record closure", design.tex / appendix "Writes into the record
-# fields"). Granting T3 to a record tool is not enough: we must also check every state-changing
-# tool that WRITES into a field that record tool later returns. A record tool may license only the
-# fields whose written value is either platform-generated or a GUARDED parameter of the writing
-# tool. Two kinds of write fail that condition, and both are explicitly patched:
-# ---------------------------------------------------------------------------------------------
+# Record closure. Granting T3 to a record tool also requires checking every state-changing tool that
+# writes into a field that record tool later returns: a record tool may license only fields whose
+# written value is platform-generated or a guarded parameter of the writer. Two writes fail that
+# condition and are patched below.
 RECORD_FIELD_ALLOWLIST: dict[str, tuple[str, ...]] = {
     "view_order_history": ("order_id", "product_id"),
 }
@@ -71,7 +68,7 @@ def _collect_fields(obj: Any, fields: tuple[str, ...]) -> set[str]:
 
 def tokenize_identifiers(text: str, split_composites: bool = True) -> set[str]:
     """split_composites=False (STRICT matcher): do NOT '/'-split -- treat a composite owner/repo (or a
-    full URL/path) as ONE decisive unit, so a padded value like "attacker/<trusted-repo>" cannot ride
+    full URL/path) as one decision unit, so a padded value like "attacker/<trusted-repo>" cannot ride
     in on the shared part."""
     if not text:
         return set()
@@ -198,8 +195,8 @@ class OriginTracker:
             return tokenize_identifiers(text)
         items = _structured_items(text)
         if items is None:
-            # A record tool's return shape is ours to know; if it stops parsing, the allowlist is
-            # silently licensing nothing and we must SEE that rather than lose utility quietly.
+            # If a record tool's return shape stops parsing, the allowlist licenses nothing;
+            # fail loudly rather than lose utility silently.
             raise RuntimeError(
                 f"record tool {fn!r} returned an unparseable result; the record-closure field "
                 f"allowlist {fields} cannot be applied to: {text[:200]!r}"
@@ -274,8 +271,7 @@ class OriginPredicate:
         return self._check_one(value)
 
     def _check_one(self, value) -> bool:
-        # STRICT decision-unit matching is the DEFAULT (our canonical/main-result behavior): match the
-        # value as a WHOLE identifier.
+        # Strict decision-unit matching (the default): match the value as a whole identifier.
         if os.environ.get("ROPE_STRICT_MATCH", "1") != "0" and isinstance(value, str):
             if self.arg_name == "url":
                 host = value.split("//", 1)[-1].split("/", 1)[0]  # strip scheme + path -> netloc/host

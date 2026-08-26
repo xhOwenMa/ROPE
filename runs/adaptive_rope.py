@@ -1,58 +1,47 @@
-"""AutoDojo (adaptive) vs important_instructions (static) ASR for ROPE on the AgentDyn suites.
+"""ROPE under the AutoDojo adaptive attack vs the static attack, on both benchmarks.
 
-    python adaptive_rope.py     (from runs/)
+    python adaptive_rope.py
+
+gpt-4o has no adaptive arm and is skipped.
 """
-import glob
-import json
-import os
-import sys
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+from _scope import (AGENTDOJO, AGENTDYN, attack_files, clean_files, it_index, load, rate)
 from corrections import corrected_security
 
-SUITES = ["github", "shopping", "dailylife"]
-MODELS = ["gpt-4o-mini", "gemini-2.5-flash", "qwen3-235b"]  # gpt-4o has no adaptive arm
-
-# Published ROPE cells: (model, suite) -> (static ASR, adaptive ASR). The recompute must match.
-PUBLISHED = {
-    ("gpt-4o-mini", "github"): (0.0, 0.0), ("gpt-4o-mini", "shopping"): (4.4, 4.4),
-    ("gpt-4o-mini", "dailylife"): (1.0, 0.5),
-    ("qwen3-235b", "github"): (0.0, 0.0), ("qwen3-235b", "shopping"): (7.2, 7.2),
-    ("qwen3-235b", "dailylife"): (0.5, 0.5),
-}
+MODELS = ["gpt-4o-mini", "gemini-2.5-flash", "qwen3-235b"]
 
 
-def _it(f):
-    return int(f.rsplit("injection_task_", 1)[1].split(".json")[0])
+def cu(model, suites):
+    return sum(rate([bool(load(f).get("utility")) for f in clean_files(model, s)])
+               for s in suites) / len(suites)
 
 
-def asr(model, suite, attack):
-    fs = sorted(glob.glob(f"{HERE}/{model}/{suite}/user_task_*/{attack}/injection_task_*.json"))
-    if not fs:
-        return None, 0
-    ds = [(json.load(open(f)), _it(f)) for f in fs]
-    return 100 * sum(corrected_security(d, suite, i) for d, i in ds) / len(ds), len(ds)
+def cell(model, suite, attack):
+    files = attack_files(model, suite, attack)
+    if not files:
+        raise SystemExit(f"FATAL: no {attack} runs for {model}/{suite}")
+    ua, sec = [], []
+    for f in files:
+        d = load(f)
+        ua.append(bool(d.get("utility")))
+        sec.append(corrected_security(d, suite, it_index(f)))
+    return rate(ua), rate(sec), len(files)
 
 
-mismatches = []
-print(f"{'agent':17} {'suite':10} {'static':>7} {'adaptive':>9}  {'n_static':>8} {'n_adapt':>8}")
-print("-" * 60)
-for model in MODELS:
-    st_all, ad_all = [], []
-    for s in SUITES:
-        st, nst = asr(model, s, "important_instructions")
-        ad, nad = asr(model, s, "autodojo")
-        print(f"{model:17} {s:10} {st:7.1f} {ad:9.1f}  {nst:8d} {nad:8d}")
-        st_all.append(st); ad_all.append(ad)
-        exp = PUBLISHED.get((model, s))
-        if exp is not None:
-            for got, want, which in ((st, exp[0], "static"), (ad, exp[1], "adaptive")):
-                if got is None or abs(got - want) > 0.05:
-                    mismatches.append(f"{model}/{s}/{which}: got {got}, published {want}")
-    print(f"{model:17} {'OVERALL':10} {sum(st_all)/3:7.1f} {sum(ad_all)/3:9.1f}   (unweighted suite mean)")
-    print()
+print("== AgentDyn ==")
+print(f"{'agent':17} {'suite':10} {'ASR static':>11} {'ASR adapt':>10} {'UA static':>10} {'UA adapt':>9} {'n':>6}")
+for m in MODELS:
+    cols = [[], [], [], []]
+    for s in AGENTDYN:
+        (u0, a0, n), (u1, a1, _) = cell(m, s, "important_instructions"), cell(m, s, "autodojo")
+        print(f"{m:17} {s:10} {a0:11.1f} {a1:10.1f} {u0:10.1f} {u1:9.1f} {n:6d}")
+        for col, v in zip(cols, (a0, a1, u0, u1)):
+            col.append(v)
+    a0, a1, u0, u1 = (sum(c) / 3 for c in cols)
+    print(f"{m:17} {'OVERALL':10} {a0:11.1f} {a1:10.1f} {u0:10.1f} {u1:9.1f}"
+          f"   CU {cu(m, AGENTDYN):.1f}\n")
 
-if mismatches:
-    raise SystemExit("FATAL: cross-check against published cells FAILED:\n  " + "\n  ".join(mismatches))
-print("cross-check vs published ROPE cells: PASS")
+print("== AgentDojo, adaptive attack ==")
+print(f"{'agent':17} {'CU':>6} {'UA':>6} {'ASR':>6}")
+for m in MODELS:
+    rs = [cell(m, s, "autodojo") for s in AGENTDOJO]
+    print(f"{m:17} {cu(m, AGENTDOJO):6.1f} {sum(r[0] for r in rs) / 3:6.1f} {sum(r[1] for r in rs) / 3:6.1f}")

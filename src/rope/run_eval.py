@@ -1,7 +1,7 @@
 """Driver for the complete routed defense.
 
-Defaults = our MAIN-RESULT configuration: routed defense, the cached **opus** router, strict
-decisive-unit matching (the origin.py default; no env var), UNCLAMPED.
+Defaults are the main-result configuration: routed defense, the cached opus router, strict
+decision-unit matching, unclamped.
 
   # main result (opus cached router), one suite:
   python -m rope.run_eval --suite github --attack important_instructions

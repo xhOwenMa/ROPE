@@ -1,14 +1,10 @@
-"""Router: look at the user's task and sort it into one of three buckets.
+"""Router: sort the user's task into one of three under-specification buckets.
 
-The three buckets say how much of the task the user left unsaid. We read ONLY the user's own
-request, never any tool output, so a hidden instruction smuggled in through tool data cannot
-change the bucket. The classifier asks an off-the-shelf LLM with a few worked examples (it
-never put a risky task in the weakest bucket; when unsure it leans toward the stronger one).
-The LLM call is passed in (`llm_complete`) so we can test the router with no real API call.
-When it is a close call, we pick the more open bucket (the safer choice).
+Reads only the user's request, never tool output, so a hidden instruction in tool data cannot change
+the bucket. The LLM call is injected (`llm_complete`) so the router is testable offline. Ties go to
+the more open bucket.
 
-Buckets, least open to most open: fully-specified < param-open < action-open.
-Later we may train a small model instead; keep `classify` stable so that swap is easy.
+Buckets, least to most open: fully-specified < param-open < action-open.
 """
 
 from __future__ import annotations
