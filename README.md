@@ -2,7 +2,7 @@
 
 Source code of our paper:
 
-> **ROPE: Routed Origin Policy Enforcement against Indirect Prompt Injection**
+> [**ROPE: Routed Origin Policy Enforcement against Indirect Prompt Injection**](https://arxiv.org/abs/2608.27496)
 > by Xinhang Ma, Chaowei Xiao, William Yeoh, Ning Zhang, Yevgeniy Vorobeychik
 
 ## Abstract
@@ -106,7 +106,7 @@ If you find this work useful, we appreciate if you can kindly cite:
 @article{rope,
   title={ROPE: Routed Origin Policy Enforcement against Indirect Prompt Injection},
   author={Ma, Xinhang and Xiao, Chaowei and Yeoh, William and Zhang, Ning and Vorobeychik, Yevgeniy},
-  journal={arXiv preprint},
+  journal={arXiv preprint arXiv:2608.27496},
   year={2026}
 }
 ```
